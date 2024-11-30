@@ -1,9 +1,9 @@
 import random
-
 from Direction import Direction
-from Move import Move
 from Rule import Rule
 from Tile import Tile
+
+
 class World:
     def __init__(self, rows, columns, rulebook):
         self.world: list = []
@@ -24,32 +24,45 @@ class World:
         lowest_entropy_pieces = []
         for y in range(len(self.world)):
             for x in range(len(self.world[y])):
-                if self.world[y][x].entropy < 1:
+                tile = self.world[y][x]
+                if tile.collapsed or tile.entropy < 1:
                     continue
-                if self.world[y][x].entropy < lowest_entropy:
-                    lowest_entropy = self.world[y][x].entropy
-                    lowest_entropy_pieces = [self.world[y][x]]
-                elif self.world[y][x].entropy == lowest_entropy:
-                    lowest_entropy_pieces.append(self.world[y][x])
+                if tile.entropy < lowest_entropy:
+                    lowest_entropy = tile.entropy
+                    lowest_entropy_pieces = [tile]
+                elif tile.entropy == lowest_entropy:
+                    lowest_entropy_pieces.append(tile)
         if len(lowest_entropy_pieces) == 0:
             return None
         return random.choice(lowest_entropy_pieces)
     def collapse(self):
         chosen_tile = self.get_lowest_entropy()
         if chosen_tile is None:
-            # while True:
-            #     move = self.history.pop()
-            #     move.tile.undo_collapse(move.possibilities)
-            #     for direction in move.tile.neighbors:
-            #         move.tile.neighbors[direction].set_possibilities(move.neighbor_possibilities[direction])
             return
         collapsed_value = random.choice(chosen_tile.possibilities)
-        move = Move(chosen_tile, collapsed_value)
         chosen_tile.collapse(collapsed_value)
-
-        for direction in chosen_tile.neighbors:
-            neighbor = chosen_tile.neighbors[direction]
-            for piece in neighbor.possibilities.copy():
-                if Rule(piece, chosen_tile.value, direction) not in self.rulebook.rules:
-                    neighbor.remove_possibility(piece)
-        self.history.append(move)
+        queue = list(chosen_tile.neighbors.values())
+        visited = set()
+        while queue:
+            tile = queue.pop(0)
+            visited.add(tile)
+            new_possibilities = {}
+            for direction in tile.neighbors:
+                neighbor = tile.neighbors[direction]
+                for piece in self.rulebook.pieces:
+                    for neighbor_piece in neighbor.get_possibilities():
+                        rule = Rule(neighbor_piece, piece, direction)
+                        if rule in self.rulebook.rules:
+                            if piece not in new_possibilities:
+                                new_possibilities[piece] = 0
+                            new_possibilities[piece] += 1
+                            break
+            new_new_possibilities = []
+            for i in new_possibilities:
+                if new_possibilities[i] == len(tile.neighbors):
+                    new_new_possibilities.append(i)
+            if sorted(new_new_possibilities) != sorted(tile.possibilities):
+                tile.set_possibilities(new_new_possibilities)
+                for neighbor in tile.neighbors.values():
+                    if neighbor not in visited and not neighbor.collapsed:
+                        queue.append(neighbor)
