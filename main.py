@@ -1,69 +1,48 @@
-import random
-
+import pygame
 from Direction import Direction
 from Rule import Rule
+from Rulebook import Rulebook
 from World import World
 rows = 9
 cols = 20
+pygame.init()
+text_font = pygame.font.SysFont('Arial', 12)
+screen = pygame.display.set_mode((1600, 900))
+fps = 60
+clock = pygame.time.Clock()
 
 image = ["SSS",
          "CCS",
          "LLC",
          "LLL"]
-# image = [["S", "S", "S"],
-#          ["C", "C", "S"],
-#          ["L", "L", "C"],
-#          ["L", "L", "L"]]
 
+rulebook = Rulebook(image)
 
-rules = set()
-pieces = set()
+world = World(rows, cols, rulebook)
+box_size = 70
+padding = 1
+box_with_padding = box_size + padding
 
-for y in range(len(image)):
-    for x in range(len(image[y])):
-        pieces.add(image[y][x])
-        if x+1 < len(image[y]):
-            rules.add(Rule(image[y][x], image[y][x + 1], Direction.RIGHT))
-        if x-1 >= 0:
-            rules.add(Rule(image[y][x], image[y][x - 1], Direction.LEFT))
-        if y+1 < len(image):
-            rules.add(Rule(image[y][x], image[y + 1][x], Direction.DOWN))
-        if y-1 >= 0:
-            rules.add(Rule(image[y][x], image[y - 1][x], Direction.UP))
-
-print(rules)
-
-world = World(rows, cols, pieces)
-print(world)
-for i in range(rows*cols):
-    chosen_tile = world.get_lowest_entropy()
-    if chosen_tile is None:
-        break
-    chosen_tile.type = random.choice(chosen_tile.possibilities)
-    chosen_tile.possibilities = []
-    chosen_tile.entropy = -1
-    for direction in Direction:
-        x, y = chosen_tile.x, chosen_tile.y
-        dx, dy = direction.value
-        if 0 <= chosen_tile.x + dx < len(world.world[0]) and 0 <= chosen_tile.y + dy < len(world.world):
-            tile = world.world[y+dy][x+dx]
-            for piece in tile.possibilities.copy():
-                if Rule(piece, chosen_tile.type, (-dx, -dy)) not in rules:
-                    tile.remove_possibility(piece)
-    print(world)
-
-# wor
-
-# grid = Grid([[0, 0, 0, 0],
-#              [0, 1, 1, 0],
-#              [0, 1, 1, 0],
-#              [0, 0, 0, 0]])
-
-# manually add each connection and possible left/right/up/down tiles
-
-# pieces = [Piece(0, [1, 0], [1, 0], [1, 0], [1, 0])]
-
-# world = World(rows, cols)
-# # print(grid.valid_neighbors(1, 1, 0))
-#
-# print(world)
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+    world.collapse()
+    height = rows * box_size
+    for i in range(rows):
+        for j in range(cols):
+            tile = world.world[i][j]
+            box_color = (255, 255, 255)
+            match tile.value:
+                case "L":
+                    box_color = (0, 255, 0)
+                case "S":
+                    box_color = (0, 0, 255)
+                case "C":
+                    box_color = (255, 255, 0)
+            text_color = (0, 0, 0)
+            text_surface = text_font.render(str(tile.possibilities), False, text_color)
+            pygame.draw.rect(screen, box_color, pygame.Rect(box_with_padding*j, height-box_with_padding*i, box_size, box_size))
+            screen.blit(text_surface, (box_with_padding*j, height-box_with_padding*i))
+    pygame.display.flip()
+    clock.tick(fps)

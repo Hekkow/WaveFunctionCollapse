@@ -4,7 +4,7 @@ class Rule:
         self.to_piece = to_piece
         self.direction = direction
     def __eq__(self, other):
-        return (self.from_piece, self.to_piece, self.direction.value) == (other.from_piece, other.to_piece, other.direction)
+        return (self.from_piece, self.to_piece, self.direction.value) == (other.from_piece, other.to_piece, other.direction.value)
     def __hash__(self):
         return hash((self.from_piece, self.to_piece))
     def __repr__(self):
